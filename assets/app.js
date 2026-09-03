@@ -30,60 +30,83 @@
     return i >= 0 ? n.slice(i + 1).toLowerCase() : 'jpg';
   }
 
-  // ---- Grid drag sliders; a plain click opens that side in the pano viewer ----
-  document.querySelectorAll('.cmp').forEach(function(widget){
-    var frame = widget.querySelector('.cmp-frame');
-    if (!frame) return;
-    var overlay = widget.querySelector('.cmp-overlay');
-    var line = widget.querySelector('.cmp-line');
-    var handle = widget.querySelector('.cmp-handle');
-    var pointerId = null;
-    var startX = 0, startY = 0, moved = false;
 
-    function posFromEvent(e){
-      var r = frame.getBoundingClientRect();
-      if (r.width <= 0) return 50;
-      return clamp((e.clientX - r.left) / r.width * 100, 0, 100);
-    }
-    function update(p){
-      overlay.style.clipPath = 'inset(0 ' + (100 - p) + '% 0 0)';
-      line.style.left = p + '%';
-      handle.style.left = p + '%';
-    }
+  // ---- 4K / 6K resolution toggle ----
+  var resButtons = document.querySelectorAll('.res-toggle-btn');
+  var sampleSections = document.querySelectorAll('.sample');
+  function setResolution(res){
+    resButtons.forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-res') === res);
+    });
+    sampleSections.forEach(function(sec){
+      var n = parseInt(sec.id.replace(/\D/g, ''), 10);
+      var is4k = n <= 25;
+      sec.classList.toggle('hidden', res === '4K' ? !is4k : is4k);
+    });
+  }
+  resButtons.forEach(function(b){
+    b.addEventListener('click', function(){
+      setResolution(b.getAttribute('data-res'));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+  setResolution('4K');
 
-    frame.addEventListener('pointerdown', function(e){
-      if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
-      pointerId = e.pointerId;
-      moved = false;
-      startX = e.clientX;
-      startY = e.clientY;
-      try { if (frame.setPointerCapture) frame.setPointerCapture(e.pointerId); } catch (err) {}
-      update(posFromEvent(e));
-      e.preventDefault();
+  // ---- Add comparison shortcuts beside the panorama badges on top cells ----
+  function openCompareWidget(leftFull, leftCaption, rightFull, rightCaption){
+    openCompare(leftFull, leftCaption || '', rightFull, rightCaption || '', 50);
+  }
+
+  function makeActionButton(label, leftFull, leftCaption, rightFull, rightCaption){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'cell-action';
+    b.textContent = label;
+    b.addEventListener('click', function(e){
+      e.stopPropagation();
+      openCompareWidget(leftFull, leftCaption, rightFull, rightCaption);
     });
-    frame.addEventListener('pointermove', function(e){
-      if (pointerId !== e.pointerId) return;
-      var dx = e.clientX - startX, dy = e.clientY - startY;
-      if (dx * dx + dy * dy > 36) moved = true;
-      update(posFromEvent(e));
-    });
-    function end(e){
-      if (pointerId !== e.pointerId) return;
-      if (!moved) {
-        var p = posFromEvent(e);
-        var leftFull = widget.getAttribute('data-left-full');
-        var rightFull = widget.getAttribute('data-right-full');
-        var leftCaption = widget.getAttribute('data-left-caption') || '';
-        var rightCaption = widget.getAttribute('data-right-caption') || '';
-        openCompare(leftFull, leftCaption, rightFull, rightCaption, p);
+    return b;
+  }
+
+  document.querySelectorAll('.sample').forEach(function(sample){
+    var topGrid = sample.querySelector('.grid3');
+    if (!topGrid) return;
+    var topCells = topGrid.querySelectorAll('.cell');
+    if (topCells.length < 3) return;
+    function cellMediaBy(pat){
+      for (var i = 0; i < topCells.length; i++){
+        var media = topCells[i].querySelector('.cell-media');
+        var full = media ? media.getAttribute('data-full') : '';
+        if (full && pat.test(full)) return media;
       }
-      pointerId = null;
+      return null;
     }
-    frame.addEventListener('pointerup', end);
-    frame.addEventListener('pointercancel', function(e){ if (pointerId === e.pointerId) pointerId = null; });
+    var newMedia = cellMediaBy(/col3_/);
+    var oldMedia = cellMediaBy(/col2_/);
+    var origMedia = cellMediaBy(/orig_/);
+    function mediaFull(media){ return media ? media.getAttribute('data-full') : ''; }
+    function mediaCaption(media){ return media ? (media.getAttribute('data-caption') || '') : ''; }
+    function addActions(media, list){
+      if (!media) return;
+      var badge = media.querySelector('.pan-badge');
+      var wrapper = media.querySelector('.cell-actions');
+      if (!wrapper){ wrapper = document.createElement('div'); wrapper.className = 'cell-actions'; media.appendChild(wrapper); }
+      if (badge && badge.parentNode !== wrapper) wrapper.appendChild(badge);
+      list.forEach(function(item){
+        wrapper.appendChild(makeActionButton(item.label, item.left, item.leftCaption, item.right, item.rightCaption));
+      });
+    }
+    addActions(newMedia, [
+      { label: '原图对比', left: mediaFull(newMedia), leftCaption: mediaCaption(newMedia), right: mediaFull(origMedia), rightCaption: mediaCaption(origMedia) },
+      { label: '旧效果对比', left: mediaFull(newMedia), leftCaption: mediaCaption(newMedia), right: mediaFull(oldMedia), rightCaption: mediaCaption(oldMedia) }
+    ]);
+    addActions(oldMedia, [
+      { label: '原图对比', left: mediaFull(oldMedia), leftCaption: mediaCaption(oldMedia), right: mediaFull(origMedia), rightCaption: mediaCaption(origMedia) }
+    ]);
   });
 
-  // ---- Panorama viewer ----
+  // ---- Panorama viewer ----  // ---- Panorama viewer ----
   var panoEl = $id('pano');
   var viewer = $id('pano-viewer');
   var panoSide = document.querySelector('.pano-side');
@@ -201,6 +224,9 @@
     currentPanoSrc = panoSrc;
     currentFullSrc = fullSrc || panoSrc;
     clearTexture();
+    panoEl.classList.add('is-collapsed');
+    sidebarCollapsed = true;
+    panoToggle.textContent = '›';
     panoEl.classList.add('open');
     document.body.classList.add('pano-lock');
     panoSource.textContent = sourceName || displayName(panoSrc);
@@ -208,7 +234,7 @@
     targetLon = 0; targetLat = 0; targetFov = 75;
     lon = 0; lat = 0; fov = 75;
     resizeViewer();
-    setTimeout(resizeViewer, 60);
+    setTimeout(resizeViewer, 260);
     loadPano(panoSrc);
   }
 
@@ -289,7 +315,7 @@
     });
     viewer.addEventListener('pointermove', function(e){
       if (!dragState || dragState.id !== e.pointerId) return;
-      targetLon = dragState.lon + (e.clientX - dragState.startX) * 0.12;
+      targetLon = dragState.lon + (dragState.startX - e.clientX) * 0.12;
       targetLat = clamp(dragState.lat + (e.clientY - dragState.startY) * 0.12, -85, 85);
     });
     function endDrag(e){
@@ -313,10 +339,27 @@
         openPano(full, full, '', btn.getAttribute('data-caption') || '');
         return;
       }
+      var badge = e.target && e.target.closest ? e.target.closest('.pan-badge') : null;
+      if (badge){
+        var bmed = badge.closest('.cell-media');
+        if (bmed){
+          var bfull = bmed.getAttribute('data-full');
+          openPano(bfull, bfull, '', bmed.getAttribute('data-caption') || '');
+          return;
+        }
+      }
       var media = e.target && e.target.closest ? e.target.closest('.cell-media') : null;
       if (media){
         var mfull = media.getAttribute('data-full');
-        openPano(mfull, mfull, '', media.getAttribute('data-caption') || '');
+        if (mfull){
+          var a = document.createElement('a');
+          a.href = mfull;
+          a.target = '_blank';
+          a.rel = 'noopener';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        }
         return;
       }
     });

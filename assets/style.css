@@ -1,4 +1,4 @@
-﻿:root{
+:root{
   --bg:#0e1116; --card:#151a21; --card2:#1a2029; --line:#27303d;
   --txt:#d7dde6; --muted:#8b96a5; --acc:#58a6ff; --acc2:#ff7b72;
   --radius:12px;
@@ -30,8 +30,8 @@ button{font-family:inherit}
 .cell{background:var(--card2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .cell-media{position:relative;aspect-ratio:2/1;background:#000;cursor:zoom-in}
 .cell-media img{width:100%;height:100%;object-fit:cover;display:block}
-.cell-media .pan-badge{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.68);border:1px solid rgba(255,255,255,.25);color:#fff;font-size:12px;padding:4px 9px;border-radius:999px;pointer-events:none;backdrop-filter:blur(3px)}
-.cell-media:hover .pan-badge{background:rgba(88,166,255,.85);border-color:rgba(88,166,255,.9)}
+.cell-media .pan-badge{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.68);border:1px solid rgba(255,255,255,.25);color:#fff;font-size:12px;padding:4px 9px;border-radius:999px;pointer-events:auto;cursor:pointer;backdrop-filter:blur(3px)}
+.cell-media .pan-badge:hover{background:rgba(88,166,255,.85);border-color:rgba(88,166,255,.9)}
 .cell-cap{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:7px 9px;font-size:12px;color:var(--txt)}
 .cell-cap .file{color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cell-cap a.raw{flex:0 0 auto;font-size:11px;color:var(--acc)}
@@ -108,3 +108,19 @@ body.pano-lock{overflow:hidden}
 #pano-viewer{cursor:grab}
 #pano-viewer:active{cursor:grabbing}
 
+
+/* swap column 2 and column 3 in the top image grid */
+.grid3 > .cell:nth-child(2){order:3}
+.grid3 > .cell:nth-child(3){order:2}
+
+/* 4K / 6K resolution toggle */
+.res-toggle{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:4px;margin:14px 0 2px}
+.res-toggle-btn{display:inline-flex;align-items:baseline;gap:8px;border:0;background:transparent;color:var(--muted);padding:8px 22px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer}
+.res-toggle-btn span{font-size:11px;font-weight:400;opacity:.75}
+.res-toggle-btn.active{background:#1a2431;color:#fff;box-shadow:inset 0 0 0 1px #2b3a4d}
+.sample.hidden{display:none}
+
+.cell-media .cell-actions{position:absolute;right:8px;bottom:8px;display:flex;gap:6px;z-index:2}
+.cell-media .cell-actions .pan-badge{position:static}
+.cell-media .cell-action{background:rgba(0,0,0,.68);border:1px solid rgba(255,255,255,.25);color:#fff;font-size:12px;padding:4px 9px;border-radius:999px;cursor:pointer;backdrop-filter:blur(3px)}
+.cell-media .cell-action:hover{border-color:rgba(88,166,255,.9);background:rgba(88,166,255,.85)}
